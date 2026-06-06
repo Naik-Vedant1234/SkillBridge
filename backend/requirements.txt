@@ -1,0 +1,40 @@
+# Web Framework
+fastapi==0.115.0
+uvicorn[standard]==0.30.0
+python-multipart==0.0.9
+
+# Database
+sqlalchemy[asyncio]==2.0.35
+asyncpg==0.30.0
+alembic==1.13.2
+
+# Configuration
+pydantic-settings==2.5.2
+python-dotenv==1.0.1
+
+# Authentication
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.1.3
+authlib==1.3.2
+itsdangerous==2.2.0
+httpx==0.27.2
+
+# Background Tasks
+celery[redis]==5.4.0
+redis==5.1.1
+
+# Vector Database
+qdrant-client==1.11.3
+
+# AI/ML
+sentence-transformers==3.1.1
+pymupdf==1.24.10
+spacy==3.7.6
+
+# LLM
+google-generativeai==0.8.2
+
+# Utilities
+email-validator==2.2.0
+Faker==26.0.0

@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+storage/resumes/*
+storage/certificates/*
+!storage/resumes/.gitkeep
+!storage/certificates/.gitkeep
