@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.core.exceptions import generic_exception_handler
@@ -10,7 +11,7 @@ from app.core.exceptions import generic_exception_handler
 from app.api.v1 import (
     auth, users, students, resumes, recommendations,
     jobs, internships, mentors, companies, courses, applications,
-    admin, career, study_groups,
+    admin, career, study_groups, skills,
 )
 
 
@@ -46,6 +47,11 @@ app.add_middleware(
 # Exception handlers
 app.add_exception_handler(Exception, generic_exception_handler)
 
+# Mount static files for resume downloads
+import os
+storage_path = os.path.abspath(settings.STORAGE_PATH)
+app.mount("/storage", StaticFiles(directory=storage_path), name="storage")
+
 # Include all v1 routers
 api_prefix = settings.API_V1_PREFIX
 app.include_router(auth.router, prefix=api_prefix)
@@ -62,6 +68,7 @@ app.include_router(applications.router, prefix=api_prefix)
 app.include_router(admin.router, prefix=api_prefix)
 app.include_router(career.router, prefix=api_prefix)
 app.include_router(study_groups.router, prefix=api_prefix)
+app.include_router(skills.router, prefix=api_prefix)
 
 
 @app.get("/", tags=["Health"])

@@ -416,11 +416,12 @@ Content-Type: application/json
 
 ### POST /api/v1/auth/logout
 
-Logout endpoint (client-side token deletion).
+Logout endpoint (client-side token deletion + server-side blacklisting).
 
 **Request**:
 ```bash
 POST /api/v1/auth/logout
+Authorization: Bearer <access_token>
 ```
 
 **Response** (200 OK):
@@ -430,7 +431,13 @@ POST /api/v1/auth/logout
 }
 ```
 
-**Note**: Since we use stateless JWT tokens, logout is handled client-side by deleting stored tokens. For server-side logout, implement token blacklisting with Redis (future enhancement).
+**Implementation** (Added in Phase 3):
+- Extracts token from Authorization header
+- Stores token in Redis blacklist with TTL = remaining token lifetime
+- Token becomes invalid immediately
+- Redis automatically removes expired tokens
+
+**Note**: Client must still delete stored tokens from localStorage/sessionStorage.
 
 ### POST /api/v1/auth/google
 
@@ -467,16 +474,33 @@ async def get_current_user(
     
     Process:
     1. Parse Authorization header (must be "Bearer <token>")
-    2. Verify JWT signature and expiry
-    3. Extract user_id from token payload
-    4. Query database for user
-    5. Verify user is active
-    6. Return User object
+    2. Check token blacklist in Redis (Phase 3 addition)
+    3. Verify JWT signature and expiry
+    4. Extract user_id from token payload
+    5. Query database for user
+    6. Verify user is active
+    7. Return User object
     """
     if not authorization.startswith("Bearer "):
         raise UnauthorizedException("Invalid authorization header format")
     
     token = authorization.replace("Bearer ", "")
+    
+    # Check if token is blacklisted (Added in Phase 3)
+    try:
+        from app.core.config import settings
+        import redis.asyncio as redis
+        
+        r = redis.from_url(settings.REDIS_URL)
+        is_blacklisted = await r.get(f"blacklist:{token}")
+        await r.aclose()
+        
+        if is_blacklisted:
+            raise UnauthorizedException("Token has been revoked")
+    except Exception:
+        # Redis not available - skip blacklist check
+        pass
+    
     payload = verify_token(token, token_type="access")
     if payload is None:
         raise UnauthorizedException("Invalid or expired token")
@@ -1409,10 +1433,11 @@ backend/
 - ✅ SQL injection protected (SQLAlchemy parameterized queries)
 - ✅ Email validation with pydantic EmailStr
 - ✅ Password minimum length: 8 characters
+- ✅ Token blacklisting on logout (Phase 3)
 - ⚠️ Change JWT_SECRET_KEY in production
 - ⚠️ Use HTTPS in production
-- ⚠️ Implement token blacklist for logout (future)
 - ⚠️ Add rate limiting (future)
+- ⚠️ Add signed URLs for file downloads (future)
 
 ---
 

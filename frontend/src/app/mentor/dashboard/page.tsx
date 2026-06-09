@@ -1,9 +1,20 @@
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+"use client";
 
-export const metadata = { title: "Mentor Dashboard" };
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/lib/auth-context";
+import { useRouter } from "next/navigation";
 
 export default function MentorDashboardPage() {
+  const { logout, user } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
+
   return (
     <div className="min-h-screen dot-grid p-6 md:p-10">
       <div className="max-w-7xl mx-auto">
@@ -14,9 +25,18 @@ export default function MentorDashboardPage() {
             </h1>
             <p className="text-muted-foreground mt-1">Guide students and manage mentorship sessions.</p>
           </div>
-          <Badge className="bg-green-500/15 text-green-400 border-green-500/20 px-3 py-1">
-            Phase 5 — Portal coming soon
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Badge className="bg-green-500/15 text-green-400 border-green-500/20 px-3 py-1">
+              {user?.role || 'Mentor'}
+            </Badge>
+            <Button 
+              variant="outline" 
+              onClick={handleLogout}
+              className="border-border/60 hover:border-red-500/40 hover:bg-red-500/5 hover:text-red-500"
+            >
+              Logout
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

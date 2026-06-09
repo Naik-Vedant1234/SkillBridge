@@ -1,6 +1,6 @@
-"""Auth endpoints - registration, login, logout, refresh."""
+"""Auth endpoints - registration, login, logout, refresh, Google OAuth."""
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Header, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import DBSession
@@ -9,6 +9,7 @@ from app.schemas.auth import (
     LoginRequest,
     TokenResponse,
     RefreshTokenRequest,
+    GoogleOAuthRequest,
     MessageResponse,
 )
 from app.services.auth_service import (
@@ -16,6 +17,7 @@ from app.services.auth_service import (
     login_user,
     refresh_access_token,
 )
+from app.services.oauth_service import oauth_service
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -65,24 +67,84 @@ async def refresh_token(
 
 
 @router.post("/logout", response_model=MessageResponse)
-async def logout():
+async def logout(
+    authorization: str = Header(None, description="Bearer <token>"),
+):
     """
-    Logout endpoint (client-side token deletion).
+    Logout endpoint with optional token blacklisting.
     
-    Since we're using stateless JWT tokens, logout is handled
-    client-side by deleting the stored tokens.
-    
-    For server-side logout, implement token blacklisting with Redis.
+    If Redis is available, blacklist the token until expiration.
+    Otherwise, client-side token deletion is sufficient.
     """
-    return MessageResponse(message="Logged out successfully. Please delete your tokens.")
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.replace("Bearer ", "")
+        
+        try:
+            # Try to blacklist token in Redis
+            from app.core.config import settings
+            import redis.asyncio as redis
+            from app.core.security import verify_token
+            
+            # Verify token and get expiry
+            payload = verify_token(token, token_type="access")
+            if payload:
+                r = redis.from_url(settings.REDIS_URL)
+                
+                # Calculate remaining TTL
+                from datetime import datetime, timezone
+                exp_timestamp = payload.get("exp")
+                if exp_timestamp:
+                    now = datetime.now(timezone.utc).timestamp()
+                    ttl = int(exp_timestamp - now)
+                    
+                    if ttl > 0:
+                        # Blacklist token with remaining TTL
+                        await r.setex(f"blacklist:{token}", ttl, "1")
+                
+                await r.aclose()
+        except Exception as e:
+            # Redis not available or error - continue with client-side logout
+            print(f"Token blacklist error (non-critical): {str(e)}")
+    
+    return MessageResponse(
+        message="Logged out successfully. Please delete your tokens."
+    )
 
 
-@router.post("/google", response_model=TokenResponse, status_code=status.HTTP_501_NOT_IMPLEMENTED)
-async def google_oauth():
+@router.post("/google", response_model=TokenResponse)
+async def google_oauth(
+    oauth_data: GoogleOAuthRequest,
+    db: DBSession,
+):
     """
-    Google OAuth login (to be implemented in Phase 3).
+    Google OAuth callback endpoint.
     
-    Will accept Google ID token from frontend Google Sign-In
-    and create/login user account.
+    Process:
+    1. Exchange authorization code for access token
+    2. Get user info from Google
+    3. Create or authenticate user
+    4. Return JWT tokens
+    
+    The frontend should:
+    1. Redirect user to Google OAuth consent screen
+    2. Receive authorization code in callback
+    3. Send code and redirect_uri to this endpoint
+    4. Store returned JWT tokens
     """
-    return MessageResponse(message="Google OAuth - to be implemented in Phase 3")
+    # Exchange code for Google access token
+    token_data = await oauth_service.exchange_code_for_token(
+        code=oauth_data.code,
+        redirect_uri=oauth_data.redirect_uri,
+    )
+    
+    # Get user info from Google
+    user_info = await oauth_service.get_user_info(
+        access_token=token_data["access_token"]
+    )
+    
+    # Authenticate or create user
+    return await oauth_service.authenticate_or_create_user(
+        google_user_info=user_info,
+        role=oauth_data.role,
+        db=db,
+    )

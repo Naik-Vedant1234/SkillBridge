@@ -28,8 +28,10 @@ class RefreshTokenRequest(BaseModel):
 
 
 class GoogleOAuthRequest(BaseModel):
-    """Google OAuth token received from frontend Google Sign-In."""
-    credential: str = Field(..., description="Google ID token from the frontend")
+    """Google OAuth callback request."""
+    code: str = Field(..., description="Authorization code from Google OAuth")
+    redirect_uri: str = Field(..., description="Redirect URI used in OAuth flow")
+    role: UserRole = Field(default=UserRole.STUDENT, description="Role for new user creation")
 
 
 class MessageResponse(BaseModel):

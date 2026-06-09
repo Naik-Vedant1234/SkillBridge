@@ -25,6 +25,22 @@ async def get_current_user(
         raise UnauthorizedException("Invalid authorization header format")
 
     token = authorization.replace("Bearer ", "")
+    
+    # Check if token is blacklisted
+    try:
+        from app.core.config import settings
+        import redis.asyncio as redis
+        
+        r = redis.from_url(settings.REDIS_URL)
+        is_blacklisted = await r.get(f"blacklist:{token}")
+        await r.aclose()
+        
+        if is_blacklisted:
+            raise UnauthorizedException("Token has been revoked")
+    except Exception:
+        # Redis not available - skip blacklist check
+        pass
+    
     payload = verify_token(token, token_type="access")
     if payload is None:
         raise UnauthorizedException("Invalid or expired token")

@@ -28,7 +28,8 @@ class Resume(Base, UUIDMixin):
     skills_extracted: Mapped[list | None] = mapped_column(JSON, nullable=True)
     score: Mapped[float | None] = mapped_column(Float, nullable=True)
     status: Mapped[ResumeStatus] = mapped_column(
-        Enum(ResumeStatus), default=ResumeStatus.UPLOADED
+        Enum(ResumeStatus, native_enum=False, values_callable=lambda x: [e.value for e in x]), 
+        default=ResumeStatus.UPLOADED
     )
     uploaded_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

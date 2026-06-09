@@ -1,0 +1,22 @@
+# Phase 1-only dependencies (infra + models + migrations + seeding)
+fastapi==0.115.0
+uvicorn[standard]==0.30.0
+python-multipart==0.0.9
+
+sqlalchemy[asyncio]==2.0.35
+asyncpg==0.30.0
+alembic==1.13.2
+
+pydantic-settings==2.5.2
+python-dotenv==1.0.1
+
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+authlib==1.3.2
+itsdangerous==2.2.0
+httpx==0.27.2
+
+redis==5.1.1
+
+email-validator==2.2.0
+Faker==26.0.0

@@ -103,10 +103,13 @@ backend/
 
 #### `app/main.py` - Application Entry Point
 ```python
+from fastapi.staticfiles import StaticFiles
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Create storage directories
     os.makedirs(f"{settings.STORAGE_PATH}/resumes", exist_ok=True)
+    os.makedirs(f"{settings.STORAGE_PATH}/certificates", exist_ok=True)
     yield
     # Shutdown logic here
 
@@ -114,9 +117,23 @@ app = FastAPI(
     title=settings.APP_NAME,
     lifespan=lifespan,
 )
+
+# CORS configuration
+app.add_middleware(CORSMiddleware, ...)
+
+# Exception handlers
+app.add_exception_handler(Exception, generic_exception_handler)
+
+# Mount static files for resume downloads (Added in Phase 3)
+storage_path = os.path.abspath(settings.STORAGE_PATH)
+app.mount("/storage", StaticFiles(directory=storage_path), name="storage")
+
+# Include all API routers
+app.include_router(...)
 ```
 - Creates the FastAPI application
 - Configures CORS for frontend communication
+- Mounts static file serving for resume downloads
 - Includes all API routers
 - **Lifespan:** Runs code on startup/shutdown
 

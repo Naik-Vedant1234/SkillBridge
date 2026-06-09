@@ -1,12 +1,66 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { useAuth } from "@/lib/auth-context";
+import { apiClient } from "@/lib/api";
+import { getGoogleOAuthURL } from "@/lib/google-oauth";
 
 export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  
+  const { login } = useAuth();
+  const router = useRouter();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
+
+    console.log("Login form submitted", { email, password });
+
+    try {
+      console.log("Calling API...");
+      const authData = await apiClient.login({ email, password });
+      console.log("Login successful", authData);
+      login(authData);
+      
+      // Redirect based on role
+      switch (authData.role) {
+        case 'student':
+          router.push('/student/dashboard');
+          break;
+        case 'mentor':
+          router.push('/mentor/dashboard');
+          break;
+        case 'company':
+          router.push('/company/dashboard');
+          break;
+        default:
+          router.push('/');
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = () => {
+    // Redirect to Google OAuth with student role as default
+    const googleAuthURL = getGoogleOAuthURL('student');
+    window.location.href = googleAuthURL;
+  };
+
   return (
     <div className="min-h-screen dot-grid flex items-center justify-center p-6">
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[400px] bg-primary/10 rounded-full blur-3xl pointer-events-none" />
@@ -32,7 +86,8 @@ export default function LoginPage() {
             <Button
               variant="outline"
               className="w-full border-border/60 hover:border-primary/40 hover:bg-primary/5"
-              id="btn-google-signin"
+              onClick={handleGoogleLogin}
+              type="button"
             >
               <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -52,24 +107,52 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="you@university.edu" className="bg-white/5 border-border/50 focus:border-primary/60" />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Link href="/forgot-password" className="text-xs text-muted-foreground hover:text-primary transition-colors">
-                  Forgot password?
-                </Link>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+                  {error}
+                </div>
+              )}
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder="you@university.edu" 
+                  className="bg-white/5 border-border/50 focus:border-primary/60"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
               </div>
-              <Input id="password" type="password" placeholder="••••••••" className="bg-white/5 border-border/50 focus:border-primary/60" />
-            </div>
 
-            <Button className="w-full gradient-brand glow border-0 text-white" id="btn-login-submit">
-              Sign in
-            </Button>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <Link href="/forgot-password" className="text-xs text-muted-foreground hover:text-primary transition-colors">
+                    Forgot password?
+                  </Link>
+                </div>
+                <Input 
+                  id="password" 
+                  type="password" 
+                  placeholder="••••••••" 
+                  className="bg-white/5 border-border/50 focus:border-primary/60"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+
+              <Button 
+                type="submit"
+                className="w-full gradient-brand glow border-0 text-white"
+                disabled={isLoading}
+              >
+                {isLoading ? "Signing in..." : "Sign in"}
+              </Button>
+            </form>
 
             <p className="text-center text-sm text-muted-foreground">
               Don&apos;t have an account?{" "}
