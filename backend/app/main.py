@@ -11,7 +11,7 @@ from app.core.exceptions import generic_exception_handler
 from app.api.v1 import (
     auth, users, students, resumes, recommendations,
     jobs, internships, mentors, companies, courses, applications,
-    admin, career, study_groups, skills,
+    admin, career, study_groups, skills, bookmarks, otp, company, mentor,
 )
 
 
@@ -65,10 +65,14 @@ app.include_router(mentors.router, prefix=api_prefix)
 app.include_router(companies.router, prefix=api_prefix)
 app.include_router(courses.router, prefix=api_prefix)
 app.include_router(applications.router, prefix=api_prefix)
+app.include_router(bookmarks.router, prefix=api_prefix)
+app.include_router(otp.router, prefix=api_prefix)
 app.include_router(admin.router, prefix=api_prefix)
 app.include_router(career.router, prefix=api_prefix)
 app.include_router(study_groups.router, prefix=api_prefix)
 app.include_router(skills.router, prefix=api_prefix)
+app.include_router(company.router, prefix=api_prefix)
+app.include_router(mentor.router, prefix=api_prefix)
 
 
 @app.get("/", tags=["Health"])

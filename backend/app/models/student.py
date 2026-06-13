@@ -58,3 +58,4 @@ class Student(Base, UUIDMixin, TimestampMixin):
     mentor_requests: Mapped[list["MentorRequest"]] = relationship(
         "MentorRequest", back_populates="student", foreign_keys="MentorRequest.student_id"
     )
+    bookmarks: Mapped[list["Bookmark"]] = relationship("Bookmark", back_populates="student")

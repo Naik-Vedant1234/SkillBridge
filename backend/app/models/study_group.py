@@ -21,7 +21,8 @@ class StudyGroup(Base, UUIDMixin, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     domain: Mapped[str | None] = mapped_column(String(100), nullable=True)
     skill_level: Mapped[StudyGroupLevel | None] = mapped_column(
-        Enum(StudyGroupLevel), nullable=True
+        Enum(StudyGroupLevel, native_enum=False, values_callable=lambda x: [e.value for e in x]),
+        nullable=True
     )
     owner_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False

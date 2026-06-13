@@ -45,7 +45,8 @@ class RoleSkill(Base, UUIDMixin):
         UUID(as_uuid=True), ForeignKey("skills.id", ondelete="CASCADE"), nullable=False
     )
     importance: Mapped[SkillImportance] = mapped_column(
-        Enum(SkillImportance), default=SkillImportance.IMPORTANT
+        Enum(SkillImportance, native_enum=False, values_callable=lambda x: [e.value for e in x]),
+        default=SkillImportance.IMPORTANT
     )
 
     role: Mapped["CareerRole"] = relationship("CareerRole", back_populates="role_skills")
@@ -61,7 +62,8 @@ class RoleProject(Base, UUIDMixin):
     project_title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     difficulty: Mapped[ProjectDifficulty] = mapped_column(
-        Enum(ProjectDifficulty), default=ProjectDifficulty.INTERMEDIATE
+        Enum(ProjectDifficulty, native_enum=False, values_callable=lambda x: [e.value for e in x]),
+        default=ProjectDifficulty.INTERMEDIATE
     )
 
     role: Mapped["CareerRole"] = relationship("CareerRole", back_populates="role_projects")

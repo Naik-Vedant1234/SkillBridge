@@ -21,6 +21,9 @@ class Course(Base, UUIDMixin):
     url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     skills_covered: Mapped[list | None] = mapped_column(JSON, nullable=True)
-    difficulty: Mapped[CourseDifficulty | None] = mapped_column(Enum(CourseDifficulty), nullable=True)
+    difficulty: Mapped[CourseDifficulty | None] = mapped_column(
+        Enum(CourseDifficulty, native_enum=False, values_callable=lambda x: [e.value for e in x]),
+        nullable=True
+    )
     duration: Mapped[str | None] = mapped_column(String(100), nullable=True)
     is_free: Mapped[bool] = mapped_column(Boolean, default=False)
