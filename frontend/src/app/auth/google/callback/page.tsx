@@ -13,10 +13,13 @@ export default function GoogleCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAuth();
+  const hasFetched = React.useRef(false);
 
   useEffect(() => {
     const handleCallback = async () => {
       try {
+        if (hasFetched.current) return;
+        
         // Get code and state from URL
         const code = searchParams.get('code');
         const state = searchParams.get('state'); // role passed in state
@@ -34,6 +37,7 @@ export default function GoogleCallbackPage() {
           return;
         }
 
+        hasFetched.current = true;
         const role = (state as 'student' | 'mentor' | 'company') || 'student';
 
         console.log('Google OAuth callback:', { code, role });
@@ -68,6 +72,7 @@ export default function GoogleCallbackPage() {
         console.error('Google OAuth error:', err);
         setError(err instanceof Error ? err.message : 'Authentication failed');
         setIsLoading(false);
+        hasFetched.current = false; // Reset on error so user can retry if needed
       }
     };
 
