@@ -7,23 +7,26 @@ import { apiClient } from "@/lib/api";
 import { parseGoogleCallback, GOOGLE_OAUTH_CONFIG } from "@/lib/google-oauth";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
+const usedCodes = new Set<string>();
+
 export default function GoogleCallbackPage() {
   const [error, setError] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAuth();
-  const hasFetched = React.useRef(false);
 
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        if (hasFetched.current) return;
-        
         // Get code and state from URL
         const code = searchParams.get('code');
         const state = searchParams.get('state'); // role passed in state
         const errorParam = searchParams.get('error');
+
+        if (code && usedCodes.has(code)) {
+          return; // Already processing this exact code
+        }
 
         if (errorParam) {
           setError(`Google OAuth error: ${errorParam}`);
@@ -37,8 +40,8 @@ export default function GoogleCallbackPage() {
           return;
         }
 
-        hasFetched.current = true;
-        const role = (state as 'student' | 'mentor' | 'company') || 'student';
+        usedCodes.add(code);
+        const role = (state as 'student' | 'mentor' | 'company' | 'login') || 'student';
 
         console.log('Google OAuth callback:', { code, role });
 
@@ -72,7 +75,6 @@ export default function GoogleCallbackPage() {
         console.error('Google OAuth error:', err);
         setError(err instanceof Error ? err.message : 'Authentication failed');
         setIsLoading(false);
-        hasFetched.current = false; // Reset on error so user can retry if needed
       }
     };
 

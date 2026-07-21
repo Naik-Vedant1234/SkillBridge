@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,48 +16,74 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   
   const { login } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("verified") === "true") {
+      setSuccessMessage("✅ Email verified successfully! Please login.");
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
 
-    console.log("Login form submitted", { email, password });
-
     try {
-      console.log("Calling API...");
       const authData = await apiClient.login({ email, password });
-      console.log("Login successful", authData);
+      console.log("✅ Login API successful:", authData);
+      
+      // Store tokens DIRECTLY first
+      localStorage.setItem('access_token', authData.access_token);
+      localStorage.setItem('refresh_token', authData.refresh_token);
+      
+      const userData = {
+        id: 'temp',
+        email: email,
+        role: authData.role,
+        is_active: true,
+      };
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      console.log("✅ Tokens stored in localStorage");
+      console.log("✅ Role:", authData.role);
+      
+      // Now call the context login (which does the same but for state)
       login(authData);
       
       // Redirect based on role
-      switch (authData.role) {
-        case 'student':
-          router.push('/student/dashboard');
-          break;
-        case 'mentor':
-          router.push('/mentor/dashboard');
-          break;
-        case 'company':
-          router.push('/company/dashboard');
-          break;
-        default:
-          router.push('/');
-      }
+      const targetUrl = authData.role === 'company' ? '/company/dashboard' 
+        : authData.role === 'student' ? '/student/dashboard'
+        : authData.role === 'mentor' ? '/mentor/dashboard'
+        : authData.role === 'admin' ? '/admin/dashboard'
+        : '/';
+      
+      console.log("✅ Redirecting to:", targetUrl);
+      window.location.href = targetUrl;
+      
     } catch (err) {
       console.error("Login error:", err);
-      setError(err instanceof Error ? err.message : 'Login failed');
+      const errorMsg = err instanceof Error ? err.message : 'Login failed';
+      setError(errorMsg);
+      
+      // If email not verified, redirect to verification page
+      if (errorMsg.includes("not verified")) {
+        setTimeout(() => {
+          router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+        }, 2000);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGoogleLogin = () => {
-    // Redirect to Google OAuth with student role as default
-    const googleAuthURL = getGoogleOAuthURL('student');
+    // Redirect to Google OAuth with 'login' intent flag
+    const googleAuthURL = getGoogleOAuthURL('login');
     window.location.href = googleAuthURL;
   };
 
@@ -83,6 +109,12 @@ export default function LoginPage() {
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
+            {successMessage && (
+              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-sm text-green-400 text-center">
+                {successMessage}
+              </div>
+            )}
+            
             <Button
               variant="outline"
               className="w-full border-border/60 hover:border-primary/40 hover:bg-primary/5"

@@ -86,7 +86,7 @@ class GoogleOAuthService:
     @staticmethod
     async def authenticate_or_create_user(
         google_user_info: dict,
-        role: UserRole,
+        role: str,
         db: AsyncSession,
     ) -> TokenResponse:
         """
@@ -95,12 +95,12 @@ class GoogleOAuthService:
         Process:
         1. Check if user exists by google_id or email
         2. If exists, update google_id if needed and return tokens
-        3. If not exists, create User + role-specific profile
+        3. If not exists, create User + role-specific profile (unless role is 'login')
         4. Generate JWT tokens
         
         Args:
             google_user_info: User info from Google (id, email, name, picture)
-            role: UserRole for new user creation
+            role: string for new user creation (or 'login' to force sign-in only)
             db: Database session
             
         Returns:
@@ -159,12 +159,28 @@ class GoogleOAuthService:
                 refresh_token=refresh_token,
                 role=user.role
             )
+            
+        # User doesn't exist. If intent was login, reject them.
+        if role == 'login':
+            raise HTTPException(
+                status_code=404,
+                detail="Account not found. Please sign up to create an account."
+            )
         
+        # Try to cast role to UserRole
+        try:
+            user_role = UserRole(role)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid role provided: {role}"
+            )
+            
         # Create new user
         user = User(
             email=email,
             google_id=google_id,
-            role=role,
+            role=user_role,
             is_active=True,
             password_hash=None,  # Google OAuth users don't have password
         )
@@ -172,18 +188,18 @@ class GoogleOAuthService:
         await db.flush()
         
         # Create profile based on role
-        if role == UserRole.STUDENT:
+        if user_role == UserRole.STUDENT:
             profile = Student(
                 user_id=user.id,
                 name=name,
                 avatar_url=avatar_url,
             )
-        elif role == UserRole.MENTOR:
+        elif user_role == UserRole.MENTOR:
             profile = Mentor(
                 user_id=user.id,
                 name=name,
             )
-        elif role == UserRole.COMPANY:
+        elif user_role == UserRole.COMPANY:
             profile = Company(
                 user_id=user.id,
                 name=name,

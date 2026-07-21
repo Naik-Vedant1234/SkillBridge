@@ -31,7 +31,7 @@ class GoogleOAuthRequest(BaseModel):
     """Google OAuth callback request."""
     code: str = Field(..., description="Authorization code from Google OAuth")
     redirect_uri: str = Field(..., description="Redirect URI used in OAuth flow")
-    role: UserRole = Field(default=UserRole.STUDENT, description="Role for new user creation")
+    role: str = Field(default="student", description="Role for new user creation or 'login' for sign in only")
 
 
 class MessageResponse(BaseModel):
